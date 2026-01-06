@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Car City Advanced</title>
+<style>
+  body { margin:0; overflow:hidden; background:#000; }
+  #ui {
+    position:absolute;
+    top:10px; left:10px;
+    color:white;
+    font-family:sans-serif;
+    z-index:1;
+  }
+</style>
+</head>
+<body>
+<div id="ui">
+W/S 가속·감속 | A/D 회전<br>
+Shift 드리프트 | Space 부스트
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+<script>
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+document.body.appendChild(renderer.domElement);
+
+// 빛
+scene.add(new THREE.AmbientLight(0xffffff,0.4));
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
+scene.add(light);
+
+// 도로
+const road = new THREE.Mesh(
+  new THREE.PlaneGeometry(500,500),
+  new THREE.MeshStandardMaterial({color:0x333333})
+);
+road.rotation.x = -Math.PI/2;
+scene.add(road);
+
+// 차선
+for(let i=-250;i<250;i+=20){
+  const line = new THREE.Mesh(
+    new THREE.BoxGeometry(1,0.01,10),
+    new THREE.MeshStandardMaterial({color:0xffffff})
+  );
+  line.position.set(0,0.01,i);
+  scene.add(line);
+}
+
+// 자동차
+const car = new THREE.Mesh(
+  new THREE.BoxGeometry(1.5,0.6,3),
+  new THREE.MeshStandardMaterial({color:0xff3333})
+);
+car.position.y = 0.3;
+scene.add(car);
+
+// 건물
+const buildings = [];
+for(let i=0;i<60;i++){
+  const b = new THREE.Mesh(
+    new THREE.BoxGeometry(4,Math.random()*15+5,4),
+    new THREE.MeshStandardMaterial({color:0x888888})
+  );
+  b.position.set(
+    (Math.random()-0.5)*400,
+    b.geometry.parameters.height/2,
+    (Math.random()-0.5)*400
+  );
+  buildings.push(b);
+  scene.add(b);
+}
+
+// 입력
+const keys = {};
+addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+
+let speed=0, rotation=0;
+
+function checkCollision(){
+  for(const b of buildings){
+    if(car.position.distanceTo(b.position)<3){
+      speed *= -0.3;
+    }
+  }
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  // 가속
+  if(keys['w']) speed+=0.03;
+  if(keys['s']) speed-=0.03;
+  speed*=0.98;
+
+  // 부스트
+  if(keys[' ']) speed+=0.1;
+
+  // 회전
+  let turn = keys['shift'] ? 0.08 : 0.04;
+  if(keys['a']) rotation+=turn;
+  if(keys['d']) rotation-=turn;
+
+  car.rotation.y = rotation;
+
+  // 이동
+  car.position.x += Math.sin(rotation)*speed;
+  car.position.z += Math.cos(rotation)*speed;
+
+  checkCollision();
+
+  // 카메라
+  const camOffset = new THREE.Vector3(
+    Math.sin(rotation)*-8,
+    4,
+    Math.cos(rotation)*-8
+  );
+  camera.position.copy(car.position).add(camOffset);
+  camera.lookAt(car.position);
+
+  renderer.render(scene,camera);
+}
+animate();
+</script>
+</body>
+</html>
